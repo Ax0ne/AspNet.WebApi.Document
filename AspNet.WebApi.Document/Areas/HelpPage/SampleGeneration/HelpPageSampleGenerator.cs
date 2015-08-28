@@ -15,6 +15,8 @@ using Newtonsoft.Json;
 
 namespace AspNet.WebApi.Document.Areas.HelpPage
 {
+    using AspNet.WebApi.Document.Models;
+
     /// <summary>
     /// This class will generate the samples for the help page.
     /// </summary>
@@ -268,6 +270,10 @@ namespace AspNet.WebApi.Document.Areas.HelpPage
                     case SampleDirection.Response:
                     default:
                         type = api.ResponseDescription.ResponseType ?? api.ResponseDescription.DeclaredType;
+                        if (!api.ResponseDescription.DeclaredType.FullName.Contains("HttpResponseMessage"))
+                        {
+                            type = typeof(PackageResult<>).MakeGenericType(new[] { type });
+                        }
                         formatters = api.SupportedResponseFormatters;
                         break;
                 }

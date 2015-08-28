@@ -1,38 +1,423 @@
-@using System.Web.Http
+﻿@using System.Web.Http
 @using System.Web.Http.Controllers
 @using System.Web.Http.Description
 @using System.Collections.ObjectModel
+@using AspNet.WebApi.Document.Areas.HelpPage
+@using AspNet.WebApi.Document.Areas.HelpPage.ModelDescriptions
 @using AspNet.WebApi.Document.Areas.HelpPage.Models
 @model Collection<ApiDescription>
 
 @{
-    ViewBag.Title = "ASP.NET Web API Help Page";
-
+    ViewBag.Title = "ASP.NET WebApi 帮助文档";
+    // ignore controllers
+    var ignoreControllers = new[] { "Test" };
     // Group APIs by controller
-    ILookup<HttpControllerDescriptor, ApiDescription> apiGroups = Model.ToLookup(api => api.ActionDescriptor.ControllerDescriptor);
+    ILookup<HttpControllerDescriptor, ApiDescription> apiGroups = Model.Where(p => !ignoreControllers.Contains(p.ActionDescriptor.ControllerDescriptor.ControllerName)).ToLookup(api => api.ActionDescriptor.ControllerDescriptor);
+    var controllerDocuments = new Dictionary<string, string>();
 }
 
-<link type="text/css" href="~/Areas/HelpPage/HelpPage.css" rel="stylesheet" />
-<header class="help-page">
-    <div class="content-wrapper">
-        <div class="float-left">
-            <h1>@ViewBag.Title</h1>
+<div class="container">
+    <div class="row">
+        <div class="col-md-3" role="columnheader">
+            <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix-top">
+                <ul class="nav bs-docs-sidenav">
+                    @foreach (var api in apiGroups)
+                    {
+                        var controllerDocumentation = ViewBag.DocumentationProvider != null ? ViewBag.DocumentationProvider.GetDocumentation(api.Key) : null;
+                        controllerDocuments.Add(api.Key.ControllerName, (string)controllerDocumentation);
+                        <li>
+                            <a href="#@api.Key.ControllerName">@(string.IsNullOrEmpty(controllerDocumentation) ? api.Key.ControllerName : controllerDocumentation)</a>
+                            <ul class="nav">
+                                @foreach (var m in api)
+                                {
+                                    <li>
+                                        <a href="#@m.GetFriendlyId()">@(string.IsNullOrEmpty(m.Documentation) ? "Null" : m.Documentation)</a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+                <a href="/Help" class="back-to-top">刷新</a>
+                <a href="/Help/ApiInvokeCode" target="_blank" class="back-to-top" id="api-invoke">Api调用代码</a>
+            </nav>
+        </div>
+        <div class="col-md-9" role="main">
+            @foreach (var group in apiGroups)
+            {
+                var cd = controllerDocuments[group.Key.ControllerName];
+                <div class="bs-docs-section">
+                    <h3 class="page-header" id="@group.Key.ControllerName">
+                        <a data-anchorjs-icon="" aria-label="Anchor link for: overview" href="#@group.Key.ControllerName" class="anchorjs-link " style="font-family: anchorjs-icons; font-style: normal; font-variant: normal; font-weight: normal; position: absolute; margin-left: -1em; padding-right: 0.5em;">
+                        </a>@(string.IsNullOrEmpty(cd) ? "Null" : cd)
+                    </h3>
+                    @foreach (var g in group)
+                    {
+                        var apiId = g.GetFriendlyId();
+                        var m = GlobalConfiguration.Configuration.GetHelpPageApiModel(apiId);
+                        <h4 id="@apiId" class="api-doc-des">
+                            接口描述：
+                            <strong>
+                                @(string.IsNullOrEmpty(g.Documentation) ? "Null" : g.Documentation)
+                            </strong>
+                        </h4>
+                        <div class="api-doc-info">
+                            <h4>
+                                接口地址：<code>@m.ApiDescription.RelativePath.Replace("UserId={UserId}&", "")</code>
+                            </h4>
+                            <h4>
+                                请求类型：<code>@m.ApiDescription.HttpMethod.Method</code>
+                            </h4>
+                            <div class="api-doc-param">
+                                @if (m.UriParameters != null && m.UriParameters.Count > 0)
+                                {
+                                    <h4>参数类型：<span class="brand-info">[FromUri]</span></h4>
+                                    <table class="table-bordered help-page-table">
+                                        <thead>
+                                            <tr><th>参数名称</th><th>描述</th><th>类型</th><th>参数标记</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (ParameterDescription parameter in m.UriParameters)
+                                            {
+                                                ModelDescription modelDescription = parameter.TypeDescription;
+                                                <tr>
+                                                    <td class="parameter-name">@parameter.Name</td>
+                                                    <td class="parameter-documentation">@parameter.Documentation</td>
+                                                    <td class="parameter-type">
+                                                        @modelDescription.Name
+                                                    </td>
+                                                    <td class="parameter-annotations">
+                                                        @if (parameter.Annotations.Count > 0)
+                                                        {
+                                                            foreach (var annotation in parameter.Annotations)
+                                                            {
+                                                                <p>@annotation.Documentation</p>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <p>None.</p>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                                else if (m.RequestBodyParameters != null && m.RequestBodyParameters.Count > 0)
+                                {
+                                    <h4 class="btn-bcode">参数类型：<span class="brand-warning">[FromBody]</span> <input type="button" class="btn btn-primary btn-sm btn-float-right" value="生成参数代码" /> </h4>
+                                    <table class="table-bordered help-page-table">
+                                        <thead>
+                                            <tr><th>参数名称</th><th>描述</th><th>类型</th><th>参数标记</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (ParameterDescription parameter in m.RequestBodyParameters)
+                                            {
+                                                ModelDescription modelDescription = parameter.TypeDescription;
+                                                <tr>
+                                                    <td class="parameter-name">@parameter.Name</td>
+                                                    <td class="parameter-documentation">@parameter.Documentation</td>
+                                                    <td class="parameter-type">
+                                                        @modelDescription.Name
+                                                    </td>
+                                                    <td class="parameter-annotations">
+                                                        @if (parameter.Annotations.Count > 0)
+                                                        {
+                                                            foreach (var annotation in parameter.Annotations)
+                                                            {
+                                                                <p>@annotation.Documentation</p>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <p>None.</p>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                if (modelDescription.ModelType.Namespace.Equals("System.Collections.Generic"))
+                                                {
+                                                    var collectionModelDescription = parameter.TypeDescription as CollectionModelDescription;
+                                                    var complexTypeModelDescription = collectionModelDescription.ElementDescription as ComplexTypeModelDescription;
+                                                    foreach (var property in complexTypeModelDescription.Properties)
+                                                    {
+                                                        <tr class="text-info">
+                                                            <td class="parameter-name">&nbsp;&nbsp;&nbsp;&nbsp; @(parameter.Name + "." + property.Name)</td>
+                                                            <td class="parameter-documentation">
+                                                                <p>@property.Documentation</p>
+                                                            </td>
+                                                            <td class="parameter-type" colspan="2">
+                                                                @property.TypeDescription.Name
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                                else
+                                {
+                                    <table><tr></tr></table>
+                                }
+                                <p class="text-center">
+                                    <input type="hidden" name="test-url" value="@m.ApiDescription.RelativePath" />
+                                    <input type="hidden" name="test-method" value="@m.ApiDescription.HttpMethod.Method" />
+                                    <input type="hidden" name="test-param-type" value="@(m.UriParameters != null && m.UriParameters.Count > 0 ? "Uri" : "Body")" />
+                                    <input type="button" class="btn btn-default btn-test" value="测试 [@g.Documentation] 接口" />
+                                </p>
+                            </div>
+                            <div class="api-doc-r">
+                                <h4 class="sample-header btn-rcode">
+                                    响应结果：<input type="button" class="btn btn-success btn-sm btn-float-right" value="生成结果代码" />
+                                </h4>
+                                <table class="table-bordered help-page-table">
+                                    <thead>
+                                        <tr><th>属性名称</th><th>描述</th><th>类型</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (m.ResourceProperties != null && m.ResourceProperties.Any())
+                                        {
+                                            foreach (ParameterDescription parameter in m.ResourceProperties)
+                                            {
+                                                ModelDescription modelDescription = parameter.TypeDescription;
+                                                <tr>
+                                                    <td class="parameter-name">@parameter.Name</td>
+                                                    <td class="parameter-documentation">
+                                                        <p>@parameter.Documentation</p>
+                                                    </td>
+                                                    <td class="parameter-type">
+                                                        @modelDescription.Name
+                                                    </td>
+                                                </tr>
+                                                if (modelDescription.ModelType.Namespace.Equals("System.Collections.Generic"))
+                                                {
+                                                    var collectionModelDescription = parameter.TypeDescription as CollectionModelDescription;
+                                                    var complexTypeModelDescription = collectionModelDescription.ElementDescription as ComplexTypeModelDescription;
+                                                    foreach (var property in complexTypeModelDescription.Properties)
+                                                    {
+                                                        <tr class="text-info">
+                                                            <td class="parameter-name">&nbsp;&nbsp;&nbsp;&nbsp; @(parameter.Name + "." + property.Name)</td>
+                                                            <td class="parameter-documentation">
+                                                                <p>@property.Documentation</p>
+                                                            </td>
+                                                            <td class="parameter-type">
+                                                                @property.TypeDescription.Name
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="3">返回 @m.ResourceDescription.Name 类型 </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                @if (m.ResourceDescription.ModelType.Namespace.Equals("System.Collections.Generic") && !m.ApiDescription.ResponseDescription.DeclaredType.FullName.Contains("HttpResponseMessage"))
+                                {
+                                    <p class="text-danger text-right">返回是一个集合<code>PackageResult&lt;IEnumerable&lt;列表表示的对象&gt;&gt;</code></p>
+                                }
+                                <div>
+                                    @if (m.SampleResponses.Count > 0)
+                                    {
+                                        if (!m.ApiDescription.ResponseDescription.DeclaredType.FullName.Contains("HttpResponseMessage"))
+                                        {
+                                            <p class="text-success">所有的响应结果都会被自动转换成统一的泛型结果 <code>PackageResult&lt;T&gt;</code> T 就是上面列表表示的对象 </p>
+                                            <div class="package-result">
+                                                <p> <code>PackageResult&lt;T&gt;.Elapsed</code> <span class="text-green">// Api内部处理耗时（毫秒）</span> </p>
+                                                <p> <code>PackageResult&lt;T&gt;.IsException</code> <span class="text-green">// 是否异常</span> </p>
+                                                <p> <code>PackageResult&lt;T&gt;.Message</code> <span class="text-green">// 结果响应附加消息（包括异常消息）</span> </p>
+                                                <p> <code>PackageResult&lt;T&gt;.Data</code> <span class="text-green">// 表示返回的具体对象 是否有正常结果判断Data是否为空即可</span> </p>
+                                            </div>
+                                        }
+                                        // Group the samples into a single tab if they are the same.
+                                        Dictionary<string, object> samples = m.SampleResponses.GroupBy(pair => pair.Value).ToDictionary(pair => String.Join(", ", pair.Select(mk => mk.Key.ToString()).ToArray()), pair => pair.Key);
+                                        var mediaTypes = samples.Keys;
+                                        foreach (var mediaType in mediaTypes)
+                                        {
+                                            var sample = samples[mediaType];
+                                            <pre class="wrapped">@sample</pre>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
-</header>
-<div id="body" class="help-page">
-    <section class="featured">
-        <div class="content-wrapper">
-            <h2>Introduction</h2>
-            <p>
-                Provide a general description of your APIs here.
-            </p>
-        </div>
-    </section>
-    <section class="content-wrapper main-content clear-fix">
-        @foreach (var group in apiGroups)
-        {
-            @Html.DisplayFor(m => group, "ApiGroup")
-        }
-    </section>
 </div>
+<!-- Modal -->
+<div class="modal fade" id="code-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            @*<div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">&nbsp; </h4>
+                </div>*@
+            <div class="modal-body" style="padding:5px;" id="code-modal-body"></div>
+            @*<div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>*@
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="test-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body" style="padding:10px;">
+                <form id="test-form" class="form-horizontal">
+                    <div id="test-modal-body">
+
+                    </div>
+                    <p class="text-center" id="test-btn-p"><button type="button" id="btn-test-submit" class="btn btn-default">提交</button></p>
+                </form>
+                <div id="test-modal-result">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section scripts{
+    <script type="text/javascript">
+        $(function () {
+            $('.api-doc-info').hover(
+                function () {
+                    $(this).addClass('doc-select')
+                },
+                function () {
+                    $(this).removeClass('doc-select')
+                }
+            );
+            $('h4.btn-bcode > input').click(function () {
+                var table = $(this).parents('div.api-doc-info').find('table:first')[0], trs = table.rows, cclass = ' // !---- 本代码由JS自动生成 ----!\r\n';
+                cclass += 'public class Model \r\n{\r\n';
+                for (var i = 1; i < trs.length; i++) {
+                    var tr = trs[i];
+                    var tds = tr.cells;
+                    cclass += '    /// &lt;summary&gt;\r\n'
+                    cclass += '    /// ' + emptyReplace(tds[1].textContent) + '\r\n'
+                    cclass += '    /// &lt;/summary&gt;\r\n'
+                    cclass += '    public ' + emptyReplace(tds[2].textContent) + ' ' + emptyReplace(tds[0].textContent) + ' {  get; set; } \r\n'
+                };
+                cclass += '} ';
+                $('#code-modal-body').html('<pre>' + cclass + '</pre>')
+                $('#code-modal').modal('toggle');
+            })
+            $('h4.btn-rcode > input').click(function () {
+                var table = $(this).parents('div.api-doc-r').find('table:first')[0], trs = table.rows, cclass = '// !---- 本代码由JS自动生成 ----!\r\n';
+                if (trs.length > 2) {
+                    cclass += 'public class Model \r\n{\r\n';
+                    for (var i = 1; i < trs.length; i++) {
+                        var tr = trs[i];
+                        var tds = tr.cells;
+                        cclass += '    /// &lt;summary&gt;\r\n'
+                        cclass += '    /// ' + emptyReplace(tds[1].textContent) + '\r\n'
+                        cclass += '    /// &lt;/summary&gt;\r\n'
+                        cclass += '    public ' + emptyReplace(tds[2].textContent) + ' ' + emptyReplace(tds[0].textContent) + ' {  get; set; } \r\n'
+                    };
+                    cclass += '} \r\n';
+                }
+                cclass += packageResult();
+                $('#code-modal-body').html('<pre>' + cclass + '</pre>')
+                $('#code-modal').modal('toggle');
+            })
+            $('.btn-test').click(function () {
+                $('#test-modal-result').html('')
+                $('#btn-test-submit').siblings().remove();
+                var table = $(this).parents('div.api-doc-param').find('table:first')[0], trs = table.rows, htmlString = '';
+                for (var i = 1; i < trs.length; i++) {
+                    var tr = trs[i], tds = tr.cells, html = '<div class="form-group">';
+                    var type = emptyReplace(tds[2].textContent);
+                    if ('Boolean'.indexOf(type) > -1) {
+                        html += '<label><input name="' + emptyReplace(tds[0].textContent) + '" type="checkbox">' + emptyReplace(tds[1].textContent) + '</label>';
+                    } else {
+                        html += '<label class="col-sm-3 control-label" for="' + emptyReplace(tds[0].textContent) + '">' + emptyReplace(tds[1].textContent) + '</label>';
+                        html += '<div class="col-sm-9"><input type="text" class="form-control input-sm" name="' + emptyReplace(tds[0].textContent) + '" id="' + emptyReplace(tds[0].textContent) + '"></div>'
+                    }
+                    html += '</div>';
+                    htmlString += html;
+                }
+                $('#test-modal-body').html(htmlString);
+                $('#test-modal').modal('toggle');
+                $('#test-btn-p').append($(this).siblings().clone())
+            })
+            $('#btn-test-submit').click(function (e) {
+                var $siblings = $(this).siblings(),
+                    method = $siblings.filter('[name="test-method"]').prop('disabled', true).val(),
+                    url = $siblings.filter('[name="test-url"]').prop('disabled', true).val(),
+                    ptype = $siblings.filter('[name="test-param-type"]').prop('disabled', true).val();
+                if (url.indexOf('?') > -1) {
+                    url = url.substring(0, url.indexOf('?'));
+                } else if (url.indexOf('{') > -1) {
+                    url = url.substring(0, url.indexOf('{'));
+                }
+                var data = {};
+                switch (method) {
+                    case 'GET':
+                        url += '?' + $('#test-form').serialize();
+                        break;
+                    case 'POST':
+                    case 'PUT':
+                    case 'DELETE':
+                        var values = $('#test-form').serializeArray();
+                        if (ptype == 'Uri') {
+                            url += '?' + $('#test-form').serialize();
+                        } else {
+                            for (var i = 0; i < values.length; i++) {
+                                data[values[i]['name']] = values[i]['value'];
+                            }
+                        }
+                        break;
+                }
+                $.ajax({
+                    url: url,
+                    type: method,
+                    data: data,
+                    complete: function (xmlHttpRequest, textStatus) {
+                        if (xmlHttpRequest.status==200) {
+                            $('#test-modal-result').html('<pre>' + (typeof xmlHttpRequest.responseJSON == 'object' ? JSON.stringify(xmlHttpRequest.responseJSON) : xmlHttpRequest.responseText) + '</pre>')
+                        } else {
+                            
+                            $('#test-modal-result').html('<pre>' + JSON.stringify(xmlHttpRequest) + '</pre>')
+                        }
+                    }
+                })
+            })
+            $.ajaxSetup({
+                headers: { 'X-Authorization': 'help-api-doc-test' }
+            });
+            function emptyReplace(value) {
+                return value.replace(/\s*/g, '')
+            }
+
+            function packageResult() {
+                var cclass = '// 统一的泛型结果对象\r\npublic class PackageResult&lt;T&gt; \r\n{\r\n';
+                cclass += '    /// &lt;summary&gt;\r\n'
+                cclass += '    /// Api内部处理耗时（毫秒）\r\n'
+                cclass += '    /// &lt;/summary&gt;\r\n'
+                cclass += '    public long Elapsed {  get; set; } \r\n'
+                cclass += '    /// &lt;summary&gt;\r\n'
+                cclass += '    /// 是否异常\r\n'
+                cclass += '    /// &lt;/summary&gt;\r\n'
+                cclass += '    public bool IsException {  get; set; } \r\n'
+                cclass += '    /// &lt;summary&gt;\r\n'
+                cclass += '    /// 结果响应附加消息（包括异常消息）\r\n'
+                cclass += '    /// &lt;/summary&gt;\r\n'
+                cclass += '    public string Message {  get; set; } \r\n'
+                cclass += '    /// &lt;summary&gt;\r\n'
+                cclass += '    /// 表示返回的具体对象 是否有正常结果判断Data是否为空即可\r\n'
+                cclass += '    /// &lt;/summary&gt;\r\n'
+                cclass += '    public T Data {  get; set; } \r\n'
+                cclass += '} ';
+                return cclass;
+            }
+        })
+    </script>
+}

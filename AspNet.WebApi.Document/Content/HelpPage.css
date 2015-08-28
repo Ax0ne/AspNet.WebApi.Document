@@ -63,14 +63,12 @@
     background-color: transparent;
 }
 
-.help-page .sample-header {
+.sample-header {
     border: 2px solid #D4D4D4;
     background: #00497E;
     color: #FFFFFF;
     padding: 8px 15px;
     border-bottom: none;
-    display: inline-block;
-    margin: 10px 0px 0px 0px;
 }
 
 .help-page .sample-content {
@@ -132,3 +130,61 @@
     color: #0000EE;
     text-decoration: none;
 }
+.bg-primary {
+    background-color: #337ab7;
+    color: #fff;
+}
+a.bg-primary:focus, a.bg-primary:hover {
+    background-color: #286090;
+}
+.bg-success {
+    background-color: #dff0d8;
+}
+a.bg-success:focus, a.bg-success:hover {
+    background-color: #c1e2b3;
+}
+.bg-info {
+    background-color: #d9edf7;
+}
+a.bg-info:focus, a.bg-info:hover {
+    background-color: #afd9ee;
+}
+.bg-warning {
+    background-color: #fcf8e3;
+}
+a.bg-warning:focus, a.bg-warning:hover {
+    background-color: #f7ecb5;
+}
+.bg-danger {
+    background-color: #f2dede;
+}
+a.bg-danger:focus, a.bg-danger:hover {
+    background-color: #e4b9b9;
+}
+.api-doc-info{ border-bottom: 2px solid #767676;padding: 3px;}
+.brand-info{ color: #5bc0de;}
+.brand-warning{ color: #f0ad4e;}
+.text-green{ color: green;}
+.package-result{ margin-bottom: 10px;}
+.package-result p{ margin: 0;}
+.doc-select {
+    background-color: #EEE;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(102, 175, 233, 0.6);
+}
+.btn-float-right{ float: right;margin-top: -5px;}
+body {
+    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAIElEQVQYlWPIPNyexoAHEJInrIN0Eyh3AyETKPcVNnkASo4S4qts7UQAAAAASUVORK5CYII=') repeat;
+    text-shadow: 2px 2px 2px #D4D4D4;
+}
+header {
+    background-image: linear-gradient(-90deg, #090718, #0B3232);
+}
+.api-doc-des {
+    background: #1977b0 none repeat scroll 0 0;
+    box-shadow: 2px 2px 10px #8c8c8c;
+    text-shadow: 2px 2px 2px #222222;
+    color: #FFF;
+    border-radius: 3px;
+    padding: 6px 3px;
+}
+.bs-docs-nav .navbar-brand, .bs-docs-nav .navbar-nav>li>a{ color: #FFF;}
