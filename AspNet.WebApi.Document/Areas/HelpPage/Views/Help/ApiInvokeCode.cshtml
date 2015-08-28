@@ -1,0 +1,84 @@
+﻿
+@{
+    ViewBag.Title = "Api 调用示例代码";
+}
+
+<div class="container">
+    <pre>
+/*----------------------------*\
+*  Author:Ax0ne
+*  CreateTime:2014/10/25 17:15:17
+*  FileName:Utils.cs
+*  Copyright (C) 2014 Sumsz.IT
+\*----------------------------*/
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Web;
+using System.Net;
+namespace 
+{
+    public class demo // 调用 Demo 
+    {
+        public void Method()
+        {
+            Utils.InvokeApi&lt;T&gt;('Controller/Action?p1=abc&p2=123') // GET 方式调用
+            Utils.InvokeApi&lt;T&gt;('Controller/Action',new {Name='abc',Age=123}) // POST 方式调用
+        }
+    }
+    public static class Utils
+    {
+        /// &lt;summary&gt;
+        /// Api调用 [GET] , 异常或其他错误返回default(T)
+        /// &lt;/summary&gt;
+        /// &lt;typeparam name="T"&gt;返回类型&lt;/typeparam&gt;
+        /// &lt;param name="absoluteUri"&gt;请求接口地址 例:Controller/Action?p1=abc&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        public static T InvokeApi&lt;T&gt;(string absoluteUri)
+        {
+        return InvokeApi&lt;T&gt;(absoluteUri, null, HttpMethod.Get);
+        }
+        /// &lt;summary&gt;
+        /// Api调用 [POST] , 异常或其他错误返回default(T)
+        /// &lt;/summary&gt;
+        /// &lt;typeparam name="T"&gt;返回类型&lt;/typeparam&gt;
+        /// &lt;param name="absoluteUri"&gt;请求接口地址 例:Controller/Action&lt;/param&gt;
+        /// &lt;param name="value"&gt;POST FormBody参数&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        public static T InvokeApi&lt;T&gt;(string absoluteUri, object value)
+        {
+        return InvokeApi&lt;T&gt;(absoluteUri, value, HttpMethod.Post);
+        }
+        // WebApi 调用 内部封装
+        private static T InvokeApi&lt;T&gt;(string baseAddress, string absoluteUri, object value, HttpMethod method)
+        {
+        var responseResult = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        using (var httpClient = new HttpClient())
+        {
+        httpClient.BaseAddress = new Uri(baseAddress);
+        //httpClient.BaseAddress = new Uri("http://localhost:40912/api/");
+        if (method == HttpMethod.Post)
+        {
+        responseResult = httpClient.PostAsJsonAsync(absoluteUri, value).Result;
+        }
+        else if (method == HttpMethod.Get)
+        {
+        responseResult = httpClient.GetAsync(absoluteUri).Result;
+        }
+        }
+        try
+        {
+        if (!responseResult.IsSuccessStatusCode) return default(T);
+        if (typeof(T).Name == "String") return (T)Convert.ChangeType(responseResult.Content.ReadAsStringAsync().Result, typeof(T));
+        // 这里做Api调用记录
+        return responseResult.Content.ReadAsAsync&lt;T&gt;().Result;
+        }
+        catch
+        {
+        return default(T);
+        }
+        }
+    }
+}
+                </pre>
+</div>
