@@ -7,6 +7,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace AspNet.WebApi.Document
 {
+    using System.Web.Http.Controllers;
     using System.Web.Http.ModelBinding;
     using System.Web.Http.ModelBinding.Binders;
 
@@ -25,17 +26,18 @@ namespace AspNet.WebApi.Document
                 routeTemplate: "api/{controller}/{action}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
-            config.Routes.MapHttpRoute(
-                name: "Error404",
-                routeTemplate: "{*url}",
-                defaults: new { controller = "Error", action = "Handle404" }
-            );
+            //config.Routes.MapHttpRoute(
+            //    name: "Error404",
+            //    routeTemplate: "{*url}",
+            //    defaults: new { controller = "Error", action = "Handle404" }
+            //);
             config.Filters.Add(new ApiActionExcutionTimerFilter());
             config.Filters.Add(new ApiExceptionFilter());
             config.Filters.Add(new ApiAuthorizationFilter());
             //var provider = new SimpleModelBinderProvider(typeof(ParaBase), new CustomModelBinder());
             //config.Services.Insert(typeof(ModelBinderProvider), 0, provider);
             config.Formatters.Remove(config.Formatters.XmlFormatter);
+            config.Services.Replace(typeof(IHttpActionSelector), new CustomHttpActionSelector());
         }
     }
 }

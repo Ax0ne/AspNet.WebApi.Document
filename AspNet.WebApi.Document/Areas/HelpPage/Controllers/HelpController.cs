@@ -30,7 +30,10 @@ namespace AspNet.WebApi.Document.Areas.HelpPage.Controllers
             ViewBag.DocumentationProvider = Configuration.Services.GetDocumentationProvider();
             return View(Configuration.Services.GetApiExplorer().ApiDescriptions);
         }
-
+        public ActionResult ApiInvokeCode()
+        {
+            return View();
+        }
         public ActionResult Api(string apiId)
         {
             if (!String.IsNullOrEmpty(apiId))

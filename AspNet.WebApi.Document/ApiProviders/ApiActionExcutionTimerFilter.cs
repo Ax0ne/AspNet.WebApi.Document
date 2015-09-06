@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Filters;
@@ -24,10 +25,13 @@ namespace AspNet.WebApi.Document.ApiProviders
         {
             if (actionContext.ModelState.IsValid == false || (actionContext.ActionArguments.Count == 1 && actionContext.ActionArguments.First().Value == null))
             {
+                var returnType = actionContext.ActionDescriptor.ReturnType;
+                //var instanceType = typeof(PackageResult<>).MakeGenericType(new[] { returnType });
+                //var instance = Activator.CreateInstance(instanceType);
                 if (actionContext.ActionArguments.Count == 1 && actionContext.ActionArguments.First().Value == null)
                 {
                     var argument = actionContext.ActionArguments.First();
-                    actionContext.Response = actionContext.Request.CreateResponse(new PackageResult<string> { Message = string.Format("参数 {0} 不能为空", argument.Key) });
+                    actionContext.Response = actionContext.Request.CreateResponse(new PackageResult<string> { Message = string.Format("参数验证错误：{0} 不能为空", argument.Key) });
                 }
                 else
                 {
